@@ -1,14 +1,16 @@
-package receipt
+package receipts
 
 import "time"
 
 // Receipt
+// ID: UUID of the receipt
 // Retailer: The name of the retailer or store the receipt is from.
 // PurchaseDate: The date of the purchase printed on the receipt (YYYY-MM-DD).
 // PurchaseTime: The time of the purchase printed on the receipt (24-hour format).
 // Items: List of items purchased.
 // Total: The total amount paid on the receipt.
 type Receipt struct {
+	ID           string    `json:"id" binding:"required"`
 	Retailer     string    `json:"retailer" binding:"required"`
 	PurchaseDate time.Time `json:"purchaseDate" binding:"required"`
 	PurchaseTime time.Time `json:"purchaseTime" binding:"required"`
@@ -31,4 +33,12 @@ type ReceiptDTO struct {
 type Item struct {
 	ShortDescription string `json:"shortDescription" binding:"required"`
 	Price            string `json:"price" binding:"required"`
+}
+
+// Points
+// ID: The ID of the receipt
+// Points: The number of points awarded
+type Points struct {
+	ID     string `json:"id" binding:"required"`
+	Points string `json:"points" binding:"required"`
 }
