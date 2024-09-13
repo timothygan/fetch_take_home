@@ -15,7 +15,7 @@ type Receipt struct {
 	PurchaseDate time.Time `json:"purchaseDate"`
 	PurchaseTime time.Time `json:"purchaseTime"`
 	Items        []Item    `json:"items"`
-	Total        string    `json:"total"`
+	Total        int64     `json:"total"`
 }
 
 // Item
@@ -47,6 +47,6 @@ type ItemDTO struct {
 // ID: The ID of the receipt
 // Points: The number of points awarded
 type Points struct {
-	ID     string `json:"id" binding:"required"`
-	Points string `json:"points" binding:"required"`
+	ID     string `json:"id"`
+	Points int64  `json:"points"`
 }
