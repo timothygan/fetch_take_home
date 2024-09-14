@@ -1,8 +1,8 @@
 package receipts
 
 import (
-	"context"
 	"errors"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"strconv"
 	"strings"
@@ -13,13 +13,13 @@ var twoPM, _ = time.Parse("15:04", "14:00")
 var fourPM, _ = time.Parse("15:04", "16:00")
 
 type DB interface {
-	GetPoints(ctx context.Context, id string) (int64, error)
-	Create(ctx context.Context, r Receipt, p Points) error
+	GetPoints(id string) (Points, error)
+	Create(r Receipt, p Points) error
 }
 
 type Service interface {
-	GetPoints(ctx context.Context, id string) (int64, error)
-	Create(ctx context.Context, receiptDto ReceiptDTO) (string, error)
+	GetPoints(id string) (Points, error)
+	Create(receiptDto ReceiptDTO) (Receipt, error)
 }
 
 type receipt struct {
@@ -30,33 +30,47 @@ func NewReceiptService(db DB) Service {
 	return &receipt{db}
 }
 
-func (r *receipt) GetPoints(ctx context.Context, id string) (int64, error) {
-	points, err := r.db.GetPoints(ctx, id)
+func (r *receipt) GetPoints(id string) (Points, error) {
+	points, err := r.db.GetPoints(id)
 	if err != nil {
-		return -1, errors.Join(ErrReceiptNotFound, err)
+		log.WithFields(log.Fields{
+			"ID": id,
+		}).Error("Failed to retrieve points for receipt")
+		return Points{}, errors.Join(ErrReceiptNotFound, err)
 	}
 	return points, nil
 }
 
-func (r *receipt) Create(ctx context.Context, receiptDto ReceiptDTO) (string, error) {
+func (r *receipt) Create(receiptDto ReceiptDTO) (Receipt, error) {
 	receiptObj, err := toReceipt(receiptDto)
 	if err != nil {
-		return "", errors.Join(ErrReceiptCreate, err)
+		log.WithFields(log.Fields{
+			"retailer":     receiptDto.Retailer,
+			"purchaseDate": receiptDto.PurchaseDate,
+			"purchaseTime": receiptDto.PurchaseTime,
+			"items":        receiptDto.Items,
+			"total":        receiptDto.Total,
+		}).Error("Failed to create receipt")
+		return Receipt{}, errors.Join(ErrReceiptCreate, err)
 	}
 
 	pointsObj := toPoints(receiptObj)
 
-	err = r.db.Create(ctx, receiptObj, pointsObj)
+	err = r.db.Create(receiptObj, pointsObj)
 	if err != nil {
-		return "", errors.Join(ErrReceiptCreate, err)
+		return Receipt{}, errors.Join(ErrReceiptCreate, err)
 	}
 
-	return receiptObj.ID, nil
+	return receiptObj, nil
 }
 
 func toItem(itemDTO ItemDTO) (Item, error) {
 	val, err := strconv.ParseFloat(itemDTO.Price, 64)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"shortDescription": itemDTO.ShortDescription,
+			"price":            itemDTO.Price,
+		}).Error("Failed to parse item")
 		return Item{}, err
 	}
 	cents := int64(val*100 + 0.5)
@@ -70,11 +84,17 @@ func toItem(itemDTO ItemDTO) (Item, error) {
 func toReceipt(receiptDTO ReceiptDTO) (Receipt, error) {
 	var purchaseDate, purchaseDateError = time.Parse("2006-01-02", receiptDTO.PurchaseDate)
 	if purchaseDateError != nil {
+		log.WithFields(log.Fields{
+			"purchaseDate": receiptDTO.PurchaseDate,
+		}).Error("Failed to parse purchase date")
 		return Receipt{}, purchaseDateError
 	}
 
 	var purchaseTime, purchaseTimeError = time.Parse("15:04", receiptDTO.PurchaseTime)
 	if purchaseTimeError != nil {
+		log.WithFields(log.Fields{
+			"purchaseTime": receiptDTO.PurchaseTime,
+		}).Error("Failed to parse purchase time")
 		return Receipt{}, purchaseTimeError
 	}
 
@@ -89,6 +109,9 @@ func toReceipt(receiptDTO ReceiptDTO) (Receipt, error) {
 
 	val, err := strconv.ParseFloat(receiptDTO.Total, 64)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"total": receiptDTO.Total,
+		}).Error("Failed to parse total")
 		return Receipt{}, err
 	}
 	cents := int64(val*100 + 0.5)
@@ -120,7 +143,7 @@ func toPoints(receipt Receipt) Points {
 
 	for _, item := range receipt.Items {
 		if len(strings.Trim(item.ShortDescription, "\\w"))%3 == 0 {
-			points += int64(math.Round(float64(item.Price) / 1000 * .2))
+			points += int64(math.Round(float64(item.Price) / 5000))
 		}
 	}
 

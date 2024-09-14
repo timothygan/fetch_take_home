@@ -1,18 +1,17 @@
 package db
 
 import (
-	"context"
 	"fetch_take_home/internal/receipts"
 	"github.com/google/uuid"
 )
 
 type Database struct {
-	pointsDB   map[string]*int64
+	pointsDB   map[string]*receipts.Points
 	receiptsDB map[string]*receipts.Receipt
 }
 
 func NewDB() receipts.DB {
-	pDB := make(map[string]*int64)
+	pDB := make(map[string]*receipts.Points)
 	rDB := make(map[string]*receipts.Receipt)
 
 	return &Database{
@@ -21,11 +20,11 @@ func NewDB() receipts.DB {
 	}
 }
 
-func (db *Database) GetPoints(ctx context.Context, id string) (int64, error) {
+func (db *Database) GetPoints(id string) (receipts.Points, error) {
 	return *db.pointsDB[id], nil
 }
 
-func (db *Database) Create(ctx context.Context, r receipts.Receipt, p receipts.Points) error {
+func (db *Database) Create(r receipts.Receipt, p receipts.Points) error {
 	var id = uuid.NewString()
 	db.receiptsDB[id] = &receipts.Receipt{
 		ID:           id,
@@ -35,6 +34,6 @@ func (db *Database) Create(ctx context.Context, r receipts.Receipt, p receipts.P
 		Items:        r.Items,
 		Total:        r.Total,
 	}
-	db.pointsDB[id] = &p.Points
+	db.pointsDB[id] = &p
 	return nil
 }
