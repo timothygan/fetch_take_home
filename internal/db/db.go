@@ -21,10 +21,13 @@ func NewDB() receipts.DB {
 }
 
 func (db *Database) GetPoints(id string) (receipts.Points, error) {
+	if db.pointsDB[id] == nil {
+		return receipts.Points{}, receipts.ErrReceiptNotFound
+	}
 	return *db.pointsDB[id], nil
 }
 
-func (db *Database) Create(r receipts.Receipt, p receipts.Points) error {
+func (db *Database) Create(r receipts.Receipt, p receipts.Points) (receipts.Receipt, error) {
 	var id = uuid.NewString()
 	db.receiptsDB[id] = &receipts.Receipt{
 		ID:           id,
@@ -35,5 +38,5 @@ func (db *Database) Create(r receipts.Receipt, p receipts.Points) error {
 		Total:        r.Total,
 	}
 	db.pointsDB[id] = &p
-	return nil
+	return *db.receiptsDB[id], nil
 }

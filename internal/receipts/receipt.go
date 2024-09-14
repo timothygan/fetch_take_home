@@ -1,9 +1,9 @@
 package receipts
 
 import (
-	"errors"
 	log "github.com/sirupsen/logrus"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -14,7 +14,7 @@ var fourPM, _ = time.Parse("15:04", "16:00")
 
 type DB interface {
 	GetPoints(id string) (Points, error)
-	Create(r Receipt, p Points) error
+	Create(r Receipt, p Points) (Receipt, error)
 }
 
 type Service interface {
@@ -27,7 +27,8 @@ type receipt struct {
 }
 
 func NewReceiptService(db DB) Service {
-	return &receipt{db}
+	return &receipt{
+		db: db}
 }
 
 func (r *receipt) GetPoints(id string) (Points, error) {
@@ -36,7 +37,7 @@ func (r *receipt) GetPoints(id string) (Points, error) {
 		log.WithFields(log.Fields{
 			"ID": id,
 		}).Error("Failed to retrieve points for receipt")
-		return Points{}, errors.Join(ErrReceiptNotFound, err)
+		return Points{}, err
 	}
 	return points, nil
 }
@@ -51,17 +52,17 @@ func (r *receipt) Create(receiptDto ReceiptDTO) (Receipt, error) {
 			"items":        receiptDto.Items,
 			"total":        receiptDto.Total,
 		}).Error("Failed to create receipt")
-		return Receipt{}, errors.Join(ErrReceiptCreate, err)
+		return Receipt{}, ErrReceiptCreate
 	}
 
 	pointsObj := toPoints(receiptObj)
 
-	err = r.db.Create(receiptObj, pointsObj)
+	createdReceipt, err := r.db.Create(receiptObj, pointsObj)
 	if err != nil {
-		return Receipt{}, errors.Join(ErrReceiptCreate, err)
+		return Receipt{}, ErrReceiptCreate
 	}
 
-	return receiptObj, nil
+	return createdReceipt, nil
 }
 
 func toItem(itemDTO ItemDTO) (Item, error) {
@@ -129,29 +130,35 @@ func toReceipt(receiptDTO ReceiptDTO) (Receipt, error) {
 func toPoints(receipt Receipt) Points {
 	var points int64 = 0
 
-	points += int64(len(receipt.Retailer))
-
+	points += int64(len(regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(receipt.Retailer, "")))
+	log.Info(points)
 	if receipt.Total%100 == 0 {
+		log.Info("100")
 		points += 50
 	}
 
 	if receipt.Total%25 == 0 {
+		log.Info("50")
 		points += 25
 	}
 
-	points += int64(len(receipt.Items) / 2)
+	points += int64(len(receipt.Items) / 2 * 5)
+	log.Info(int64(len(receipt.Items) / 2 * 5))
 
 	for _, item := range receipt.Items {
-		if len(strings.Trim(item.ShortDescription, "\\w"))%3 == 0 {
-			points += int64(math.Round(float64(item.Price) / 5000))
+		if len(strings.TrimSpace(item.ShortDescription))%3 == 0 {
+			points += int64(math.Ceil(float64(item.Price) / 500))
+			log.Info(int64(math.Ceil(float64(item.Price) / 500)))
 		}
 	}
 
 	if receipt.PurchaseDate.Day()%2 == 1 {
+		log.Info("date")
 		points += 6
 	}
 
 	if receipt.PurchaseTime.Before(fourPM) && receipt.PurchaseTime.After(twoPM) {
+		log.Info("time")
 		points += 10
 	}
 

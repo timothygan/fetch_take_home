@@ -1,8 +1,7 @@
 package http
 
 import (
-	"errors"
-	"fetch_take_home/internal/db"
+	"fetch_take_home/errors"
 	"fetch_take_home/internal/receipts"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -12,19 +11,18 @@ type Handler struct {
 	ReceiptService receipts.Service
 }
 
-func Setup(router *gin.Engine) {
-	database := db.NewDB()
-	receiptService := receipts.NewReceiptService(database)
-	newHandler(router, receiptService)
-}
-
-func newHandler(router *gin.Engine, receiptService receipts.Service) {
+func Activate(router *gin.Engine, receiptService receipts.Service) {
 	handler := Handler{
 		ReceiptService: receiptService,
 	}
 
 	router.GET("/receipts/:id/points", handler.GetPoints)
 	router.POST("/receipts/process", handler.Create)
+	router.GET("/health", handler.HealthCheck)
+}
+
+func getPointsResponse(p receipts.Points) gin.H {
+	return gin.H{"points": p.Points}
 }
 
 func (h *Handler) GetPoints(c *gin.Context) {
@@ -34,14 +32,19 @@ func (h *Handler) GetPoints(c *gin.Context) {
 		c.IndentedJSON(status, e)
 		return
 	}
-	c.IndentedJSON(http.StatusOK, points.Points)
+	c.IndentedJSON(http.StatusOK, getPointsResponse(points))
+}
+
+func createResponse(r receipts.Receipt) gin.H {
+	return gin.H{"id": r.ID}
 }
 
 func (h *Handler) Create(c *gin.Context) {
 	var receiptDTO receipts.ReceiptDTO
 
 	if err := c.ShouldBindJSON(&receiptDTO); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		status, e := handleError(receipts.ErrReceiptCreate)
+		c.IndentedJSON(status, e)
 		return
 	}
 
@@ -52,16 +55,20 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusCreated, receipt)
+	c.IndentedJSON(http.StatusCreated, createResponse(receipt))
+}
+
+func (h *Handler) HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "200", "healthy": "OK"})
 }
 
 func handleError(e error) (int, error) {
-	switch {
-	case errors.Is(e, receipts.ErrReceiptNotFound):
-		return http.StatusNotFound, e
-	case errors.Is(e, receipts.ErrReceiptCreate):
-		return http.StatusBadRequest, e
+	switch e {
+	case receipts.ErrReceiptNotFound:
+		return http.StatusNotFound, errors.NewError(errors.NotFound, "No receipt found for that id")
+	case receipts.ErrReceiptCreate:
+		return http.StatusBadRequest, errors.NewError(errors.BadRequest, "The receipt is invalid")
 	default:
-		return http.StatusInternalServerError, e
+		return http.StatusInternalServerError, errors.NewError(errors.InternalServerError, "Internal server error")
 	}
 }
