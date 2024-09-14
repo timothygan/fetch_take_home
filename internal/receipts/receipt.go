@@ -3,7 +3,6 @@ package receipts
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
 	"math"
 	"strconv"
 	"strings"
@@ -14,12 +13,12 @@ var twoPM, _ = time.Parse("15:04", "14:00")
 var fourPM, _ = time.Parse("15:04", "16:00")
 
 type DB interface {
-	GetPoints(ctx context.Context, id string) (Points, error)
+	GetPoints(ctx context.Context, id string) (int64, error)
 	Create(ctx context.Context, r Receipt, p Points) error
 }
 
 type Service interface {
-	GetPoints(ctx context.Context, id string) (Points, error)
+	GetPoints(ctx context.Context, id string) (int64, error)
 	Create(ctx context.Context, receiptDto ReceiptDTO) (string, error)
 }
 
@@ -31,10 +30,10 @@ func NewReceiptService(db DB) Service {
 	return &receipt{db}
 }
 
-func (r *receipt) GetPoints(ctx context.Context, id string) (Points, error) {
+func (r *receipt) GetPoints(ctx context.Context, id string) (int64, error) {
 	points, err := r.db.GetPoints(ctx, id)
 	if err != nil {
-		return Points{}, errors.Join(ErrReceiptNotFound, err)
+		return -1, errors.Join(ErrReceiptNotFound, err)
 	}
 	return points, nil
 }
@@ -95,7 +94,7 @@ func toReceipt(receiptDTO ReceiptDTO) (Receipt, error) {
 	cents := int64(val*100 + 0.5)
 
 	return Receipt{
-		ID:           uuid.NewString(),
+		ID:           "",
 		Retailer:     receiptDTO.Retailer,
 		PurchaseDate: purchaseDate,
 		PurchaseTime: purchaseTime,
@@ -134,7 +133,7 @@ func toPoints(receipt Receipt) Points {
 	}
 
 	return Points{
-		ID:     receipt.ID,
+		ID:     "",
 		Points: points,
 	}
 }
