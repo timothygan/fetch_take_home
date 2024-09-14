@@ -5,6 +5,6 @@ import (
 )
 
 var (
-	ErrReceiptNotFound = errors.New("receipt not found")
-	ErrReceiptCreate   = errors.New("failed to create receipt")
+	ErrReceiptNotFound = errors.New("No receipt found for that id")
+	ErrReceiptCreate   = errors.New("The receipt is invalid")
 )
