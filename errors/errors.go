@@ -3,9 +3,9 @@ package errors
 import "fmt"
 
 const (
-	InternalServerError = "INTERNAL_SERVER_ERROR"
+	InternalServerError = "500"
 
-	BadRequest = "BAD_REQUEST"
+	BadRequest = "400"
 
 	NotFound = "404"
 )
@@ -19,7 +19,7 @@ func (a AppError) Error() string {
 	return fmt.Sprintf("%s: %s", a.Code, a.Description)
 }
 
-func NewError(code string, description string) error {
+func NewAppError(code string, description string) error {
 	e := &AppError{
 		Code:        code,
 		Description: description,

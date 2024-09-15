@@ -33,10 +33,13 @@ func (db *Database) Create(r receipts.Receipt, p receipts.Points) (receipts.Rece
 		ID:           id,
 		Retailer:     r.Retailer,
 		PurchaseDate: r.PurchaseDate,
-		PurchaseTime: r.PurchaseDate,
+		PurchaseTime: r.PurchaseTime,
 		Items:        r.Items,
 		Total:        r.Total,
 	}
-	db.pointsDB[id] = &p
+	db.pointsDB[id] = &receipts.Points{
+		ID:     id,
+		Points: p.Points,
+	}
 	return *db.receiptsDB[id], nil
 }
