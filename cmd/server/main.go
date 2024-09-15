@@ -13,7 +13,7 @@ func Run() error {
 	service := receipts.NewReceiptService(database)
 	router := gin.New()
 	http.Activate(router, service)
-	if err := router.Run("localhost:8080"); err != nil {
+	if err := router.Run(":8080"); err != nil {
 		return err
 	}
 	return nil
