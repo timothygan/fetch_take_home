@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type mockReceiptService struct {
@@ -26,7 +27,7 @@ func (s *mockReceiptService) GetPoints(id string) (receipts.Points, error) {
 	return s.GetPointsResult, s.GetPointsError
 }
 
-func (s *mockReceiptService) Create(receiptDTO receipts.ReceiptDTO) (receipts.Receipt, error) {
+func (s *mockReceiptService) Create(receipt receipts.Receipt) (receipts.Receipt, error) {
 	return s.CreateResult, s.CreateError
 }
 
@@ -163,6 +164,134 @@ func TestHandlerCreate(t *testing.T) {
 				}
 				assert.Equal(t, test.response, err)
 			}
+		})
+	}
+}
+
+func TestToReceipt(t *testing.T) {
+	targetPurchaseDate, _ := time.Parse("2006-01-02", "2022-01-01")
+	targetPurchaseTime, _ := time.Parse("15:04", "13:01")
+	cornerMarketPurchaseDate, _ := time.Parse("2006-01-02", "2022-03-20")
+	cornerMarketPurchaseTime, _ := time.Parse("15:04", "14:33")
+	targetItemsDTO := []receipts.ItemDTO{
+		{
+			ShortDescription: "Mountain Dew 12PK",
+			Price:            "6.49",
+		}, {
+			ShortDescription: "Emils Cheese Pizza",
+			Price:            "12.25",
+		}, {
+			ShortDescription: "Knorr Creamy Chicken",
+			Price:            "1.26",
+		}, {
+			ShortDescription: "Doritos Nacho Cheese",
+			Price:            "3.35",
+		}, {
+			ShortDescription: "   Klarbrunn 12-PK 12 FL OZ  ",
+			Price:            "12.00",
+		},
+	}
+	cornerMarketItemsDTO := []receipts.ItemDTO{
+		{
+			ShortDescription: "Gatorade",
+			Price:            "2.25",
+		}, {
+			ShortDescription: "Gatorade",
+			Price:            "2.25",
+		}, {
+			ShortDescription: "Gatorade",
+			Price:            "2.25",
+		}, {
+			ShortDescription: "Gatorade",
+			Price:            "2.25",
+		},
+	}
+	targetItems := []receipts.Item{
+		{
+			ShortDescription: "Mountain Dew 12PK",
+			Price:            649,
+		}, {
+			ShortDescription: "Emils Cheese Pizza",
+			Price:            1225,
+		}, {
+			ShortDescription: "Knorr Creamy Chicken",
+			Price:            126,
+		}, {
+			ShortDescription: "Doritos Nacho Cheese",
+			Price:            335,
+		}, {
+			ShortDescription: "   Klarbrunn 12-PK 12 FL OZ  ",
+			Price:            1200,
+		},
+	}
+	cornerMarketItems := []receipts.Item{
+		{
+			ShortDescription: "Gatorade",
+			Price:            225,
+		}, {
+			ShortDescription: "Gatorade",
+			Price:            225,
+		}, {
+			ShortDescription: "Gatorade",
+			Price:            225,
+		}, {
+			ShortDescription: "Gatorade",
+			Price:            225,
+		},
+	}
+
+	targetReceiptDTO := receipts.ReceiptDTO{
+		Retailer:     "Target",
+		PurchaseDate: "2022-01-01",
+		PurchaseTime: "13:01",
+		Items:        targetItemsDTO,
+		Total:        "35.35",
+	}
+
+	cornerMarketDTO := receipts.ReceiptDTO{
+		Retailer:     "M&M Corner Market",
+		PurchaseDate: "2022-03-20",
+		PurchaseTime: "14:33",
+		Items:        cornerMarketItemsDTO,
+		Total:        "9.00",
+	}
+
+	targetReceipt := receipts.Receipt{
+		Retailer:     "Target",
+		PurchaseDate: targetPurchaseDate,
+		PurchaseTime: targetPurchaseTime,
+		Items:        targetItems,
+		Total:        3535,
+	}
+
+	cornerMarketReceipt := receipts.Receipt{
+		Retailer:     "M&M Corner Market",
+		PurchaseDate: cornerMarketPurchaseDate,
+		PurchaseTime: cornerMarketPurchaseTime,
+		Items:        cornerMarketItems,
+		Total:        900,
+	}
+
+	tests := map[string]struct {
+		result receipts.Receipt
+		input  receipts.ReceiptDTO
+	}{
+		"Target receipt mapped successfully": {
+			input:  targetReceiptDTO,
+			result: targetReceipt,
+		},
+
+		"Corner Market receipt  mapped successfully": {
+			input:  cornerMarketDTO,
+			result: cornerMarketReceipt,
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			response, _ := toReceipt(test.input)
+
+			assert.Equal(t, test.result, response)
 		})
 	}
 }

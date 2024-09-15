@@ -32,7 +32,7 @@ func TestDBGet(t *testing.T) {
 	}{
 		"Successful Get": {
 			input:  createdReceipt.ID,
-			expect: receipts.Points{},
+			expect: receipts.Points{ID: createdReceipt.ID},
 			err:    nil,
 		},
 		"Not found error": {
