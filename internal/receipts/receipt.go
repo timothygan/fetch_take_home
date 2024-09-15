@@ -19,7 +19,7 @@ type DB interface {
 
 type Service interface {
 	GetPoints(id string) (Points, error)
-	Create(receiptDto ReceiptDTO) (Receipt, error)
+	Create(receiptDTO ReceiptDTO) (Receipt, error)
 }
 
 type receipt struct {
@@ -42,24 +42,24 @@ func (r *receipt) GetPoints(id string) (Points, error) {
 	return points, nil
 }
 
-func (r *receipt) Create(receiptDto ReceiptDTO) (Receipt, error) {
-	receiptObj, err := toReceipt(receiptDto)
+func (r *receipt) Create(receiptDTO ReceiptDTO) (Receipt, error) {
+	receiptObj, err := toReceipt(receiptDTO)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"retailer":     receiptDto.Retailer,
-			"purchaseDate": receiptDto.PurchaseDate,
-			"purchaseTime": receiptDto.PurchaseTime,
-			"items":        receiptDto.Items,
-			"total":        receiptDto.Total,
+			"retailer":     receiptDTO.Retailer,
+			"purchaseDate": receiptDTO.PurchaseDate,
+			"purchaseTime": receiptDTO.PurchaseTime,
+			"items":        receiptDTO.Items,
+			"total":        receiptDTO.Total,
 		}).Error("Failed to create receipt")
-		return Receipt{}, ErrReceiptCreate
+		return Receipt{}, ErrReceiptInvalid
 	}
 
 	pointsObj := toPoints(receiptObj)
 
 	createdReceipt, err := r.db.Create(receiptObj, pointsObj)
 	if err != nil {
-		return Receipt{}, ErrReceiptCreate
+		return Receipt{}, ErrReceiptInvalid
 	}
 
 	return createdReceipt, nil
@@ -131,19 +131,15 @@ func toPoints(receipt Receipt) Points {
 	var points int64 = 0
 
 	points += int64(len(regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(receipt.Retailer, "")))
-	log.Info(points)
 	if receipt.Total%100 == 0 {
-		log.Info("100")
 		points += 50
 	}
 
 	if receipt.Total%25 == 0 {
-		log.Info("50")
 		points += 25
 	}
 
 	points += int64(len(receipt.Items) / 2 * 5)
-	log.Info(int64(len(receipt.Items) / 2 * 5))
 
 	for _, item := range receipt.Items {
 		if len(strings.TrimSpace(item.ShortDescription))%3 == 0 {
@@ -153,12 +149,10 @@ func toPoints(receipt Receipt) Points {
 	}
 
 	if receipt.PurchaseDate.Day()%2 == 1 {
-		log.Info("date")
 		points += 6
 	}
 
 	if receipt.PurchaseTime.Before(fourPM) && receipt.PurchaseTime.After(twoPM) {
-		log.Info("time")
 		points += 10
 	}
 

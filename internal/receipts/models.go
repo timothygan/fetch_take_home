@@ -50,3 +50,15 @@ type Points struct {
 	ID     string `json:"id"`
 	Points int64  `json:"points"`
 }
+
+// CreateResponse
+// id: The ID of the receipt
+type CreateResponse struct {
+	ID string `json:"id"`
+}
+
+// PointsResponse
+// points: The number of points awarded
+type PointsResponse struct {
+	Points int64 `json:"points"`
+}
