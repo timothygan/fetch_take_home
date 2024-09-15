@@ -4,6 +4,7 @@ import (
 	"fetch_take_home/errors"
 	"fetch_take_home/internal/receipts"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -48,14 +49,28 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	receipt, err := h.ReceiptService.Create(receiptDTO)
+	receipt, err := toReceipt(receiptDTO)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"retailer":     receiptDTO.Retailer,
+			"purchaseDate": receiptDTO.PurchaseDate,
+			"purchaseTime": receiptDTO.PurchaseTime,
+			"items":        receiptDTO.Items,
+			"total":        receiptDTO.Total,
+		}).Error("Failed to create receipt")
+		status, e := handleError(err)
+		c.IndentedJSON(status, e)
+		return
+	}
+
+	createdReceipt, err := h.ReceiptService.Create(receipt)
 	if err != nil {
 		status, e := handleError(err)
 		c.IndentedJSON(status, e)
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, createResponse(receipt))
+	c.IndentedJSON(http.StatusOK, createResponse(createdReceipt))
 }
 
 func (h *Handler) HealthCheck(c *gin.Context) {
