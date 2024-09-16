@@ -14,7 +14,7 @@ func toItem(itemDTO receipts.ItemDTO) (receipts.Item, error) {
 			"shortDescription": itemDTO.ShortDescription,
 			"price":            itemDTO.Price,
 		}).Error("Failed to parse item")
-		return receipts.Item{}, err
+		return receipts.Item{}, receipts.ErrReceiptInvalid
 	}
 	cents := int64(val*100 + 0.5)
 
@@ -30,7 +30,7 @@ func toReceipt(receiptDTO receipts.ReceiptDTO) (receipts.Receipt, error) {
 		log.WithFields(log.Fields{
 			"purchaseDate": receiptDTO.PurchaseDate,
 		}).Error("Failed to parse purchase date")
-		return receipts.Receipt{}, purchaseDateError
+		return receipts.Receipt{}, receipts.ErrReceiptInvalid
 	}
 
 	var purchaseTime, purchaseTimeError = time.Parse("15:04", receiptDTO.PurchaseTime)
@@ -38,7 +38,7 @@ func toReceipt(receiptDTO receipts.ReceiptDTO) (receipts.Receipt, error) {
 		log.WithFields(log.Fields{
 			"purchaseTime": receiptDTO.PurchaseTime,
 		}).Error("Failed to parse purchase time")
-		return receipts.Receipt{}, purchaseTimeError
+		return receipts.Receipt{}, receipts.ErrReceiptInvalid
 	}
 
 	var newItems []receipts.Item
@@ -55,7 +55,7 @@ func toReceipt(receiptDTO receipts.ReceiptDTO) (receipts.Receipt, error) {
 		log.WithFields(log.Fields{
 			"total": receiptDTO.Total,
 		}).Error("Failed to parse total")
-		return receipts.Receipt{}, err
+		return receipts.Receipt{}, receipts.ErrReceiptInvalid
 	}
 	cents := int64(val*100 + 0.5)
 
